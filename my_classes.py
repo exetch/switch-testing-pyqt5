@@ -1,5 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QDialog, QVBoxLayout, QLineEdit
+from PyQt5.QtWidgets import QMainWindow, QLabel, QPushButton, QDialog, QVBoxLayout, QLineEdit, QComboBox
 import json
+
 
 class AddSwitchDialog(QDialog):
     def __init__(self):
@@ -20,12 +21,11 @@ class AddSwitchDialog(QDialog):
 
         self.button.clicked.connect(self.save_switch)
 
-
-
     def save_switch(self):
         vendor_code = self.line_edit.text()
         print(f"Артикул выключателя: {vendor_code}")
         self.accept()
+
 
 class TestSwitchesApp(QMainWindow):
     def __init__(self):
@@ -56,4 +56,3 @@ class TestSwitchesApp(QMainWindow):
         data.append(switch_data)  # Добавляем новый переключатель к данным
         with open(filename, "w") as file:
             json.dump(data, file, indent=4)  # Записываем все данные в файл
-
