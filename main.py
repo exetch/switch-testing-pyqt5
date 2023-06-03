@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QMenu, QAction, QToolBar, QWidget, QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QLabel, QLineEdit, QVBoxLayout, QPushButton, QComboBox, QMessageBox
+
+from PyQt5.QtWidgets import QMenu, QAction, QToolBar, QApplication, QMainWindow
 from add_switch_dialog import AddSwitchDialog, EditSwitchDialog
 
 
