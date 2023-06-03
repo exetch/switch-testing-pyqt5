@@ -144,7 +144,7 @@ class EditSwitchDialog(QDialog):
         self.setLayout(layout)
 
         self.current_position = 1  # Первое положение
-        self.switch_data = None
+        self.switch_data ={}
 
         self.button_next_position.clicked.connect(self.save_and_next_position)
         self.button_save_switch.clicked.connect(self.save_switch)
@@ -177,15 +177,27 @@ class EditSwitchDialog(QDialog):
 
     def populate_table(self):
         positions = self.switch_data['positions']
-        for position in range(1, positions + 1):
-            contacts = self.switch_data[f"position_{position}"]
-            for row, (contact1, contact2) in enumerate(contacts):
-                self.table.setItem(row, 0, QTableWidgetItem(str(contact1)))
-                self.table.setItem(row, 1, QTableWidgetItem(str(contact2)))
+
+        # Очищаем таблицу перед заполнением
+        self.table.clearContents()
+
+        if positions > 1:
+            position_key = f"position_{self.current_position}"
+            contacts = self.switch_data[position_key]
+
+            if contacts:
+                for row, contact in enumerate(contacts):
+                    contact_1 = QTableWidgetItem(str(contact[0]))
+                    contact_2 = QTableWidgetItem(str(contact[1]))
+                    self.table.setItem(row, 0, contact_1)
+                    self.table.setItem(row, 1, contact_2)
+            else:
+                # Очищаем таблицу, если нет замкнутых контактов в текущем положении
+                self.table.clearContents()
 
     def save_and_next_position(self):
         contacts = []
-        for row in range(24):
+        for row in range(2):
             contact1_item = self.table.item(row, 0)
             contact2_item = self.table.item(row, 1)
             if contact1_item is not None and contact2_item is not None:
