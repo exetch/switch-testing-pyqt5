@@ -1,5 +1,5 @@
-from PyQt5.QtWidgets import QAction, QToolBar, QWidget, QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QLabel, QLineEdit, QVBoxLayout, QPushButton, QComboBox, QMessageBox
-from add_switch_dialog import AddSwitchDialog
+from PyQt5.QtWidgets import QMenu, QAction, QToolBar, QWidget, QApplication, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QLabel, QLineEdit, QVBoxLayout, QPushButton, QComboBox, QMessageBox
+from add_switch_dialog import AddSwitchDialog, EditSwitchDialog
 
 
 
@@ -8,33 +8,33 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("CamSwitch Tester")
         self.setGeometry(100, 100, 800, 800)
-
-        self.button_add_switch = QPushButton("Добавить переключатель", self)
-        self.button_add_switch.clicked.connect(self.open_add_switch_dialog)
-
-        layout = QVBoxLayout()
-        layout.addWidget(self.button_add_switch)
-
-        central_widget = QWidget()
-        central_widget.setLayout(layout)
-        self.setCentralWidget(central_widget)
         self.init_toolbar()  # Инициализация главной панели инструментов
 
     def init_toolbar(self):
-        toolbar = QToolBar(self)  # Создание главной панели инструментов
+        toolbar = QToolBar()
         self.addToolBar(toolbar)
 
-        file_action = QAction("Файл", self)
-        config_action = QAction("Конфигурация", self)
-        help_action = QAction("Справка", self)
+        configuration_menu = QMenu("Конфигурация", self)
 
-        toolbar.addAction(file_action)
-        toolbar.addAction(config_action)
-        toolbar.addAction(help_action)
+        add_switch_action = QAction("Добавить переключатель", self)
+        add_switch_action.triggered.connect(self.open_add_switch_dialog)
+        configuration_menu.addAction(add_switch_action)
+
+        edit_switch_action = QAction("Редактировать переключатель", self)
+        edit_switch_action.triggered.connect(self.edit_switch)
+        configuration_menu.addAction(edit_switch_action)
+
+        toolbar.addAction(configuration_menu.menuAction())
+
 
     def open_add_switch_dialog(self):
         dialog = AddSwitchDialog()
         dialog.exec_()
+
+    def edit_switch(self):
+        pass
+        edit_dialog = EditSwitchDialog()
+        edit_dialog.exec_()
 
 app = QApplication([])
 window = MainWindow()

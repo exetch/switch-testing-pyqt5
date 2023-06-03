@@ -104,4 +104,6 @@ class AddSwitchDialog(QDialog):
 
         self.close()
 
+class EditSwitchDialog(QDialog):
+    pass
 
