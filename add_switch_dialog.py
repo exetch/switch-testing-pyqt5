@@ -122,9 +122,9 @@ class EditSwitchDialog(QDialog):
         self.combo_box_positions = QComboBox(self)
         self.combo_box_positions.addItems(["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"])
 
-        self.button_next_position = QPushButton("Сохранить позицию и перейти к следующей", self)
+        self.button_next_position = QPushButton("Сохранить положение и перейти к следующему", self)
         self.button_save_switch = QPushButton("Сохранить переключатель", self)
-        self.button_previous_position = QPushButton("Вернуться к предыдущей позиции", self)
+        self.button_previous_position = QPushButton("Вернуться к предыдущему положению", self)
 
         self.table = QTableWidget(24, 2)  # Создаем таблицу с 24 строками и 2 столбцами
         self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])  # Задаем названия столбцов
@@ -171,7 +171,7 @@ class EditSwitchDialog(QDialog):
                 self.combo_box_positions.setCurrentText(
                     str(self.switch_data['positions']))  # Устанавливаем количество положений
                 self.populate_table()  # Заполняем таблицу данными
-                self.setWindowTitle(f"Редактировать переключатель - {vendor_code}")
+                self.setWindowTitle(f"Редактировать переключатель - {vendor_code} (Положение 1)")
             else:
                 QMessageBox.critical(self, "Ошибка", "Переключатель не найден")
 
