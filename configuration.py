@@ -277,3 +277,52 @@ class EditSwitchDialog(QDialog):
         self.table.clearContents()
         self.setWindowTitle("Редактировать переключатель")
 
+class DelSwitchDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Удаление переключателя")
+        self.label_vendor_code = QLabel("Введите артикул для удаления переключателя:", self)
+        self.line_edit_vendor_code = QLineEdit(self)
+        self.line_edit_vendor_code.setCompleter(self.create_completer())
+
+        self.button_delete = QPushButton("Удалить", self)
+        self.button_delete.clicked.connect(self.delete_switch)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.label_vendor_code)
+        layout.addWidget(self.line_edit_vendor_code)
+        layout.addWidget(self.button_delete)
+        self.setLayout(layout)
+
+    def create_completer(self):
+        with open('switches_data.json', 'r') as file:
+            data = json.load(file)
+            vendor_codes = [switch['vendor_code'] for switch in data]
+            completer = QCompleter(vendor_codes)
+            completer.setCaseSensitivity(Qt.CaseInsensitive)
+            return completer
+
+    def show_confirm_dialog(self, vendor_code):
+        reply = QMessageBox.question(self, "Подтверждение удаления",
+                                     f"Вы действительно хотите удалить переключатель '{vendor_code}'?",
+                                     QMessageBox.Yes | QMessageBox.No)
+        return reply == QMessageBox.Yes
+
+    def delete_switch(self):
+        vendor_code = self.line_edit_vendor_code.text()
+        with open('switches_data.json', 'r') as file:
+            data = json.load(file)
+        found = False
+        for i, switch in enumerate(data):
+            if switch['vendor_code'] == vendor_code:
+                found = True
+                break
+        if found:
+            if self.show_confirm_dialog(vendor_code):
+                del data[i]
+                with open('switches_data.json', 'w') as file:
+                    json.dump(data, file, indent=4)
+                QMessageBox.information(self, "Удаление переключателя", f"Переключатель '{vendor_code}' успешно удален.")
+        else:
+            QMessageBox.warning(self, "Удаление переключателя", "Переключатель не найден.")
+

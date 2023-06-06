@@ -3,14 +3,14 @@ from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QMenu, QWidget, QLab
 from PyQt5.QtCore import Qt
 import json
 from utils import get_open_com_ports
-from add_switch_dialog import EditSwitchDialog, AddSwitchDialog
+from configuration import EditSwitchDialog, AddSwitchDialog, DelSwitchDialog
 
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("CamSwitch Tester")
-        self.setGeometry(100, 100, 1400, 800)
+        self.setGeometry(100, 100, 1620, 800)
         self.init_toolbar()  # Инициализация главной панели инструментов
         self.init_vendor_selection()  # Инициализация панели выбора переключателя
         self.init_table_widget()  # Инициализация таблицы для отображения информации о переключателе
@@ -29,6 +29,10 @@ class MainWindow(QMainWindow):
         edit_switch_action = QAction("Редактировать переключатель", self)
         edit_switch_action.triggered.connect(self.edit_switch)
         configuration_menu.addAction(edit_switch_action)
+
+        delete_switch_action = QAction("Удалить переключатель", self)
+        delete_switch_action.triggered.connect(self.open_del_switch_dialog)
+        configuration_menu.addAction(delete_switch_action)
 
         toolbar.addAction(configuration_menu.menuAction())
 
@@ -70,7 +74,10 @@ class MainWindow(QMainWindow):
 
     def init_table_widget(self):
         self.table_widget = QTableWidget(self)
-        self.table_widget.setGeometry(0, 100, 1400, 700)  # Set the size and position of the table widget
+        self.table_widget.setGeometry(0, 100, 1400, 700)
+
+
+
 
     def create_completer(self):
         with open('switches_data.json', 'r') as file:
@@ -96,6 +103,7 @@ class MainWindow(QMainWindow):
         self.table_widget.clear()
         self.table_widget.setRowCount(positions)
         self.table_widget.setColumnCount(49)
+
         self.table_widget.setHorizontalHeaderLabels(['Номер положения'] + [str(i) for i in range(1, 49)])
 
         for position in range(1, positions + 1):
@@ -103,12 +111,21 @@ class MainWindow(QMainWindow):
             contacts = switch_data.get(position_key, [])
             self.table_widget.setItem(position - 1, 0, QTableWidgetItem(f"Положение {position}"))
             for contact_pair in contacts:
-                if len(contact_pair) == 2:  # Проверка наличия пары контактов
+                if len(contact_pair) == 2:
                     contact1, contact2 = contact_pair
-                    self.table_widget.setItem(position - 1, contact1, QTableWidgetItem(str(contact2)))
+                    item = QTableWidgetItem(str(contact2))
+                    item.setTextAlignment(Qt.AlignCenter)  # Установка выравнивания содержимого ячейки
+                    self.table_widget.setItem(position - 1, contact1, item)
 
         self.table_widget.resizeColumnsToContents()
         self.table_widget.resizeRowsToContents()
+
+        for column in range(1, 49):
+            self.table_widget.horizontalHeader().setMinimumSectionSize(30)
+            self.table_widget.setColumnWidth(column, 30)
+
+        # # Добавление нижней границы к строке с заголовком
+        # self.table_widget.horizontalHeader().setStyleSheet("QHeaderView::section { border-bottom: 1px solid black; }")
 
     def init_layout(self):
         central_widget = QWidget()
@@ -129,6 +146,10 @@ class MainWindow(QMainWindow):
     def edit_switch(self):
         edit_dialog = EditSwitchDialog()
         edit_dialog.exec_()
+
+    def open_del_switch_dialog(self):
+        dialog = DelSwitchDialog(self)
+        dialog.exec_()
 
 app = QApplication([])
 window = MainWindow()
