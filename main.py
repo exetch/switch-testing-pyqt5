@@ -260,25 +260,37 @@ class MainWindow(QMainWindow):
         self.update_user_combobox()
 
     def update_table_with_results(self, position, switch_data, measured_data):
-        position_key = f"position_{position}"
-        contacts = switch_data.get(position_key, [])
-        for contact_pair in contacts:
-            if len(contact_pair) == 2:
-                contact1, contact2 = contact_pair
-                item = self.table_widget.item(position - 1, contact1)
-                if item is not None:
-                    if (
-                            (contact1, contact2) in measured_data
-                            and measured_data[contact1][contact2] == 0
-                    ):
-                        item.setBackground(QColor("red"))
-                    elif (
-                            (contact1, contact2) in measured_data
-                            and measured_data[contact1][contact2] == 1
-                    ):
-                        item.setBackground(QColor("green"))
-                    else:
-                        item.setBackground(QColor("yellow"))
+        for contact_pair in switch_data:
+            contact1, contact2 = contact_pair
+            item = self.table_widget.item(position - 1, contact1)
+            if item is not None:
+                if (
+                        contact1 in measured_data
+                        and contact2 in measured_data[contact1]
+                        and measured_data[contact1][contact2] == 1
+                ):
+                    item.setBackground(QColor("green"))
+                elif (
+                        contact1 in measured_data
+                        and contact2 in measured_data[contact1]
+                        and measured_data[contact1][contact2] == 0
+                ):
+                    item.setBackground(QColor("red"))
+        for contact1 in measured_data:
+            for contact2 in measured_data[contact1]:
+                contact_pair = [contact1, contact2]
+                if (
+                        contact_pair not in switch_data
+                        and measured_data[contact1][contact2] == 1
+                ):
+                    item = self.table_widget.item(position - 1, contact1)
+                    if item is None:
+                        item = QTableWidgetItem()  # Создание нового объекта QTableWidgetItem
+                        self.table_widget.setItem(position - 1, contact1,
+                                                  item)  # Установка нового объекта QTableWidgetItem
+                    item.setBackground(QColor("yellow"))
+                    item.setTextAlignment(Qt.AlignCenter)
+                    item.setText(f"{contact2}")
 
 
 app = QApplication([])
