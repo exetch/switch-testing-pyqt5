@@ -3,8 +3,8 @@ from PyQt5.QtCore import Qt
 import json
 
 class AddSwitchDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setWindowTitle("Добавить переключатель")
         self.setGeometry(200, 200, 500, 500)
 
@@ -47,6 +47,7 @@ class AddSwitchDialog(QDialog):
         self.button_next_position.clicked.connect(self.save_and_next_position)
         self.button_save_switch.clicked.connect(self.save_switch)
         self.button_previous_position.clicked.connect(self.go_to_previous_position)
+
 
     def save_and_next_position(self):
         contacts = []
@@ -100,14 +101,14 @@ class AddSwitchDialog(QDialog):
         with open(filename, "w") as file:
             json.dump(data, file, indent=4,
                       separators=(", ", ": "))  # Записываем все данные в файл с желаемым форматированием
-
+        self.parent().update_vendor_selection()
         QMessageBox.information(self, "Информация", "Переключатель сохранен")
 
         self.close()
 
 class EditSwitchDialog(QDialog):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent=None):
+        super().__init__(parent)
         self.setWindowTitle("Редактировать переключатель")
         self.setGeometry(200, 200, 600, 500)
 
@@ -320,9 +321,12 @@ class DelSwitchDialog(QDialog):
         if found:
             if self.show_confirm_dialog(vendor_code):
                 del data[i]
+
                 with open('switches_data.json', 'w') as file:
                     json.dump(data, file, indent=4)
+                self.parent().update_vendor_selection()
                 QMessageBox.information(self, "Удаление переключателя", f"Переключатель '{vendor_code}' успешно удален.")
+                self.line_edit_vendor_code.clear()
         else:
             QMessageBox.warning(self, "Удаление переключателя", "Переключатель не найден.")
 
