@@ -1,16 +1,20 @@
 from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QMenu, QWidget, QLabel, QLineEdit, QCompleter, QTableWidget, \
     QTableWidgetItem, QVBoxLayout, QPushButton, QApplication, QHBoxLayout, QComboBox, QSplitter, QSizePolicy
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor
 import json
-from utils import get_open_com_ports
+import threading
+from utils import get_open_com_ports, load_saved_vendor_code, save_vendor_code, save_selected_port, load_saved_port
 from configuration import EditSwitchDialog, AddSwitchDialog, DelSwitchDialog
 from data_processing import run_data_processing
 from users import add_user, del_user
 from terminal import TerminalWindow
 
 
+
+
 class MainWindow(QMainWindow):
+    updateTableSignal = pyqtSignal(int, list, dict)
     def __init__(self):
         super().__init__()
         self.setWindowTitle("CamSwitch Tester")
@@ -19,6 +23,12 @@ class MainWindow(QMainWindow):
         self.init_vendor_selection()  # Инициализация панели выбора переключателя
         self.init_table_widget()  # Инициализация таблицы для отображения информации о переключателе
         self.init_layout()  # Инициализация макета и добавление виджетов
+        self.updateTableSignal.connect(self.update_table_with_results_slot)
+        load_saved_vendor_code(self.line_edit_vendor_code)
+        load_saved_port(self.combo_box_ports)
+
+
+
 
     def init_toolbar(self):
         toolbar = QToolBar()
@@ -57,14 +67,25 @@ class MainWindow(QMainWindow):
         user_button.clicked.connect(user_menu.exec_)
 
         toolbar.addWidget(configuration_button)
-        toolbar.addWidget(user_button)
 
-        toolbar.addWidget(QLabel("Активный пользователь:"))
+        toolbar.addWidget(user_button)
+        space = QLabel("")
+        space.setMinimumWidth(20)
+        toolbar.addWidget(space)
+
+        active_user_label = QLabel("Активный пользователь:")
+        active_user_label.setMinimumWidth(170)  # Установка минимальной ширины в пикселях
+        toolbar.addWidget(active_user_label)
+
         self.user_combobox = QComboBox()
         self.user_combobox.setFixedHeight(27)
+        self.user_combobox.setFixedWidth(115)
         toolbar.addWidget(self.user_combobox)
 
+
         self.update_user_combobox()
+
+        self.setCentralWidget(QWidget())
 
     def init_vendor_selection(self):
         self.vendor_selection = QWidget(self)
@@ -99,6 +120,7 @@ class MainWindow(QMainWindow):
         self.line_edit_vendor_code.returnPressed.connect(self.retrieve_switch_data)
         self.search_button.clicked.connect(self.retrieve_switch_data)
         self.start_button.clicked.connect(self.run_data_processing)
+        self.start_button.clicked.connect(self.init_layout)
 
         # Получаем список открытых портов и добавляем их в выпадающий список
         open_ports = get_open_com_ports()
@@ -120,6 +142,8 @@ class MainWindow(QMainWindow):
 
     def retrieve_switch_data(self):
         vendor_code = self.line_edit_vendor_code.text()
+        save_vendor_code(self.line_edit_vendor_code)
+        save_selected_port(self.combo_box_ports)
         with open('switches_data.json', 'r') as file:
             data = json.load(file)
             for switch in data:
@@ -127,7 +151,7 @@ class MainWindow(QMainWindow):
                     positions = switch['positions']
                     self.display_switch_info(positions, switch)
                     return
-        # If vendor code not found
+
         self.display_switch_info(0, {})
 
     def display_switch_info(self, positions, switch_data):
@@ -159,41 +183,36 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
+        main_layout = QVBoxLayout(central_widget)
+
         splitter = QSplitter(Qt.Vertical)  # Создаем вертикальный разделитель
         splitter.addWidget(self.table_widget)  # Добавляем table_widget в разделитель
 
-        layout = QVBoxLayout(central_widget)
-        layout.addWidget(self.vendor_selection)  # Добавляем vendor_selection в макет
-        layout.addWidget(splitter)  # Добавляем разделитель в макет
+        main_layout.addWidget(self.vendor_selection)  # Добавляем vendor_selection в макет
+        main_layout.addWidget(splitter)  # Добавляем разделитель в макет
 
         # Добавляем информацию о контактах
         contact_info_widget = QWidget()
         contact_info_layout = QHBoxLayout(contact_info_widget)
         contact_info_layout.setContentsMargins(20, 10, 0, 10)
 
-        green_rect = QLabel()
-        green_rect.setFixedSize(30, 30)
-        green_rect.setStyleSheet("background-color: green;")
-        green_label = QLabel("Соответствует схеме")
+        color_mapping = {
+            "green": ("Соответствует схеме", "#00FF00"),
+            "red": ("Не соответствует схеме, не замкнуты", "#FF0000"),
+            "yellow": ("Не соответствует схеме, замкнуты", "#FFFF00")
+        }
 
-        red_rect = QLabel()
-        red_rect.setFixedSize(30, 30)
-        red_rect.setStyleSheet("background-color: red;")
-        red_label = QLabel("Не соответствует схеме, не замкнуты")
+        for color, (label_text, color_code) in color_mapping.items():
+            color_rect = QLabel()
+            color_rect.setFixedSize(30, 30)
+            color_rect.setStyleSheet(f"background-color: {color_code};")
 
-        yellow_rect = QLabel()
-        yellow_rect.setFixedSize(30, 30)
-        yellow_rect.setStyleSheet("background-color: yellow;")
-        yellow_label = QLabel("Не соответствует схеме, замкнуты")
+            color_label = QLabel(label_text)
 
-        contact_info_layout.addWidget(green_rect)
-        contact_info_layout.addWidget(green_label)
-        contact_info_layout.addWidget(red_rect)
-        contact_info_layout.addWidget(red_label)
-        contact_info_layout.addWidget(yellow_rect)
-        contact_info_layout.addWidget(yellow_label)
+            contact_info_layout.addWidget(color_rect)
+            contact_info_layout.addWidget(color_label)
 
-        layout.addWidget(contact_info_widget)  # Добавляем информацию о контактах в макет
+        main_layout.addWidget(contact_info_widget)  # Добавляем информацию о контактах в макет
 
         terminal_widget = QWidget()
         terminal_layout = QVBoxLayout(terminal_widget)
@@ -204,20 +223,20 @@ class MainWindow(QMainWindow):
 
         terminal_text_edit = TerminalWindow()
         terminal_text_edit.setFixedHeight(400)
-
+        #
         terminal_layout.addWidget(terminal_title)
         terminal_layout.addWidget(terminal_text_edit)
 
-        layout.addWidget(terminal_widget)
+        main_layout.addWidget(terminal_widget)
+
         # Добавляем кнопку для очистки окна терминала
         clear_button = QPushButton("Очистить")
         clear_button.clicked.connect(terminal_text_edit.clear_terminal)
-        layout.addWidget(clear_button)
+        main_layout.addWidget(clear_button)
 
         # Устанавливаем политики размера для центрального виджета
-        layout.setContentsMargins(5, 5, 5, 5)  # Устанавливаем отступы макета в 0
-        layout.setSpacing(0)
-        layout.addStretch(1)  # Растягиваем свободное пространство внизу
+        main_layout.setContentsMargins(5, 5, 5, 5)  # Устанавливаем отступы макета
+        main_layout.setSpacing(10)  # Устанавливаем отступ между виджетами
 
         # Устанавливаем политики размера для table_widget
         self.table_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -242,7 +261,11 @@ class MainWindow(QMainWindow):
         port = self.combo_box_ports.currentText()
         vendor_code = self.line_edit_vendor_code.text()
 
-        run_data_processing(port, vendor_code, self)
+        # Создаем отдельный поток для выполнения длительных операций
+        processing_thread = threading.Thread(
+            target=run_data_processing, args=(port, vendor_code, self)
+        )
+        processing_thread.start()
 
 
     def update_user_combobox(self):
@@ -259,7 +282,8 @@ class MainWindow(QMainWindow):
         del_user(self)
         self.update_user_combobox()
 
-    def update_table_with_results(self, position, switch_data, measured_data):
+    @pyqtSlot(int, list, dict)
+    def update_table_with_results_slot(self, position, switch_data, measured_data):
         for contact_pair in switch_data:
             contact1, contact2 = contact_pair
             item = self.table_widget.item(position - 1, contact1)
@@ -297,3 +321,6 @@ app = QApplication([])
 window = MainWindow()
 window.show()
 app.exec()
+
+
+

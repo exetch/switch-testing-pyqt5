@@ -330,3 +330,19 @@ class DelSwitchDialog(QDialog):
         else:
             QMessageBox.warning(self, "Удаление переключателя", "Переключатель не найден.")
 
+class ContactWidgetItem(QTableWidgetItem):
+    def __init__(self, contacts):
+        super().__init__()
+        self.contacts = contacts
+        self.setFlags(self.flags() & ~Qt.ItemIsEditable)  # Запрещаем редактирование ячейки
+
+    def setData(self, role, value):
+        if role == Qt.UserRole:
+            self.contacts = value
+
+    def data(self, role):
+        if role == Qt.DisplayRole:
+            return ", ".join(str(contact) for contact in self.contacts)
+
+        return super().data(role)
+

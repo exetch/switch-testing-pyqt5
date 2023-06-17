@@ -1,6 +1,7 @@
 import serial
+from utils import get_contact_count, get_switch_data, read_data, send_command, check_switch, process_position, \
+    read_data_return
 from time import sleep
-from utils import get_contact_count, get_switch_data, check_position, read_data, send_command, check_switch
 
 RESET_SIGNAL = b'\x80'
 READY_SIGNAL = b'\x87'
@@ -9,95 +10,124 @@ CORRECTNESS_COMMAND = b'\x83'
 INCORRECTNESS_COMMAND = b'\x84'
 CORRECT_ALL_COMMAND = b'\x85'
 CONTACTS_COUNT = b'\x88'
+NEXT_POSITION_SIGNAL = b'\x89'
+SPACE_KEY = b' '
+
+
+def check_position(switch_data, measured_data):
+    incorrect_closed = []
+    incorrect_opened = []
+
+    for closed_contacts in switch_data:
+        contact1, contact2 = closed_contacts
+
+        if (
+                contact1 in measured_data
+                and contact2 in measured_data[contact1]
+                and measured_data[contact1][contact2] == 0
+        ):
+            incorrect_opened.append(closed_contacts)
+
+    for contact1 in measured_data:
+        for contact2 in measured_data[contact1]:
+            contact_pair = [contact1, contact2]
+            if (
+                    contact_pair not in switch_data
+                    and measured_data[contact1][contact2] == 1
+            ):
+                # Контакты замкнуты, но должны быть разомкнуты
+                incorrect_closed.append((contact1, contact2))
+
+    return incorrect_closed, incorrect_opened
 
 
 def run_data_processing(port, vendor_code, instance):
+    # switch_data = get_switch_data(vendor_code)
+    # sleep(1)
+    # print('данные получены!')
+    # correct_positions = []
+    # measured_data = {1: {2: 0, 3: 0, 4: 0}, 2: {3: 0, 4: 1}, 3: {4: 0}}
+    # sleep(1)
+    # incorrect_closed, incorrect_opened = check_position(switch_data[f'position_{1}'], measured_data)
+    # instance.updateTableSignal.emit(1, switch_data[f'position_{1}'], measured_data)
+    # if incorrect_closed or incorrect_opened:
+    #
+    #     print('Положение 1 негодно')
+    #     for closed_contact in incorrect_closed:
+    #         print(f"Замкнуты контакты {closed_contact[0]} и {closed_contact[1]}")
+    #     for opened_contact in incorrect_opened:
+    #         print(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
+    #
+    # else:
+    #     print("Положение 1 годно")
+    #     correct_positions.append(1)
+    #
+    #
+    # measured_data_2= {1: {2: 1, 3: 1, 4: 0}, 2: {3: 0, 4: 1}, 3: {4: 0}}
+    # sleep(1)
+    # incorrect_closed_2, incorrect_opened_2 = check_position(switch_data[f'position_{2}'], measured_data_2)
+    # instance.updateTableSignal.emit(2, switch_data[f'position_{2}'], measured_data_2)
+    # if incorrect_closed_2 or incorrect_opened_2:
+    #
+    #     print('Положение 2 негодго')
+    #     for closed_contact in incorrect_closed_2:
+    #         print(f"Замкнуты контакты {closed_contact[0]} и {closed_contact[1]}")
+    #     for opened_contact in incorrect_opened_2:
+    #         print(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
+    # else:
+    #     print("Положение 2 годно")
+    #     correct_positions.append(2)
+    #
+    #
+    #
+    #
+    # if len(correct_positions) == switch_data['positions']:
+    #     print("Переключатель полностью годен.")
+    # else:
+    #     print("Переключатель негоден. Некорректные положения:")
+    #     for position in range(1, switch_data['positions'] + 1):
+    #         if position not in correct_positions:
+    #             print(f"Положение {position}")
     while True:
         baudrate = 9600
         ser = serial.Serial(port, baudrate)
-        read_data(ser, READY_SIGNAL)
-        print("Сигнал сброса принят!")
-        # Получение данных о переключателе
-        switch_data = get_switch_data(vendor_code)
-        # Выставление количества контактов
-        contacts_count = get_contact_count(vendor_code)
 
-        if contacts_count is not None:
-            print("Выставление количества контактов...")
-            send_command(ser, CONTACTS_COUNT)
-            ser.write(bytes([contacts_count]))
-            print("Команда выставления количества контактов отправлена.")
-        else:
-            print("Не удалось получить данные о количестве контактов.")
+        read_data(ser, RESET_SIGNAL)
+        print('Сигнал сброс получен!')
+        while True:
+            switch_data = get_switch_data(vendor_code)
+            contacts_count = get_contact_count(vendor_code)
 
-        # Ожидание сигнала "готов к измерению" (10000111)
-        read_data(ser, READY_SIGNAL)
-        print("Сигнал 'готов к измерению' принят!")
+            if contacts_count is not None:
+                print("Выставление количества контактов...")
+                send_command(ser, b'\x88')
+                sleep(0.5)
 
-        # Подготовка команды "10000010" для начала измерений
-        send_command(ser, START_MEASUREMENT_COMMAND)
-
-        correct_positions = []  # Список для хранения номеров корректных положений
-        for position in range(1, switch_data['positions'] + 1):
-            measured_data = {}  # Словарь для хранения измеренных данных
-
-            for i in range(1, contacts_count):
-                # Принятие первого байта с номером первого контакта "01ХХХХХХ"
-                first_contact_byte = ser.read()
-                print(first_contact_byte)
-
-                first_contact_number = first_contact_byte[0] & 0x3F  # Младшие 6 битов
-
-                contact_status = {}  # Словарь для хранения состояний контактов
-
-                while True:
-                    # Принятие последующих байтов с состоянием контактов и номером следующего контакта
-                    contact_byte = ser.read()
-                    print(contact_byte)
-
-                    if contact_byte == b'\x86':
-                        # Принят сигнал окончания передачи "10000110"
-                        break
-
-                    contact_number = contact_byte[0] & 0x3F  # Младшие 6 битов
-                    contact_state = (contact_byte[0] & 0xC0) >> 6  # Старшие 2 бита
-
-                    contact_status[contact_number] = contact_state
-
-                measured_data[first_contact_number] = contact_status
-                # print(measured_data)
-
-            # Проверка данных согласно настройкам переключателя
-            incorrect_closed, incorrect_opened = check_position(switch_data[f'position_{position}'], measured_data)
-            instance.update_table_with_results(position, switch_data[f'position_{position}'],
-                                               measured_data)  # Вызов метода на экземпляре
-
-            if len(incorrect_closed) == 0 and len(incorrect_opened) == 0:
-                print(f"В положении {position} все хорошо. Положение собрано корректно")
-                correct_positions.append(position)
-                # Отправить команду о правильности положения "10000011"
-                send_command(ser, CORRECTNESS_COMMAND)
-
+                contacts_count_command = bytes([contacts_count])
+                ser.write(contacts_count_command)
+                print("Команда выставления количества контактов отправлена.")
             else:
-                print(f"Положение {position} собрано некорректно. Некорректные контакты:")
-                for closed_contact in incorrect_closed:
-                    print(f"Замкнуты контакты {closed_contact[0]} и {closed_contact[1]}")
-                for opened_contact in incorrect_opened:
-                    print(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
-                # Отправить команду о неправильности положения "10000100"
-                send_command(ser, INCORRECTNESS_COMMAND)
+                print("Не удалось получить данные о количестве контактов.")
 
-            # Переключение на следующее положение или завершение программы
-            check_switch(ser)
+            if read_data_return(ser, READY_SIGNAL) == RESET_SIGNAL:
+                continue
 
-        if len(correct_positions) == switch_data['positions']:
-            print("Переключатель полностью годен.")
-            # Отправить команду о правильности всех положений "10000101"
-            correct_all_command = b'\x85'
-            sleep(0.5)
-            ser.write(correct_all_command)
-        else:
-            print("Переключатель негоден. Некорректные положения:")
+            correct_positions = []
+
             for position in range(1, switch_data['positions'] + 1):
-                if position not in correct_positions:
-                    print(f"Положение {position}")
+                send_command(ser, START_MEASUREMENT_COMMAND)
+                if process_position(ser, switch_data, contacts_count, position, instance):
+                    correct_positions.append(position)
+                if position == switch_data['positions']:
+                    break
+
+                check_switch(ser)
+
+            if len(correct_positions) == switch_data['positions']:
+                print("Переключатель полностью годен.")
+                send_command(ser, CORRECT_ALL_COMMAND)
+            else:
+                print("Переключатель негоден. Некорректные положения:")
+                for position in range(1, switch_data['positions'] + 1):
+                    if position not in correct_positions:
+                        print(f"Положение {position}")
