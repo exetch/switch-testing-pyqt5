@@ -20,14 +20,12 @@ def data_processing(port, vendor_code, stop_event, instance):
     baudrate = 256000
     ser = serial.Serial(port, baudrate)
     while True:
-        QMessageBox.information(instance, "Информация", "Нажмите сброс")
+
         read_data(ser, RESET_SIGNAL, stop_event)
         if stop_event.is_set():
             stop_event.clear()
             instance.add_message_to_widget('\nПринят сигнал стоп')
             break
-
-        QMessageBox.close(instance)
         print('Сигнал сброс получен!')
         instance.add_message_to_widget('Сигнал сброс получен!')
         instance.tests_counter += 1
