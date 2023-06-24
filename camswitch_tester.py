@@ -1,21 +1,21 @@
 from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QMenu, QWidget, QLabel, QLineEdit, QCompleter, QTableWidget, \
-    QTableWidgetItem, QVBoxLayout, QPushButton, QApplication, QHBoxLayout, QComboBox, QSplitter, QSizePolicy, QTextEdit, QScrollArea
+    QTableWidgetItem, QVBoxLayout, QPushButton, QApplication, QHBoxLayout, QComboBox, QSplitter, QSizePolicy, QTextEdit, \
+    QScrollArea
 from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor
 import json
 import threading
-import logging
-from utils import get_open_com_ports, load_saved_vendor_code, save_vendor_code, save_selected_port, load_saved_port, save_tests_counter, load_tests_counter
+from utils import get_open_com_ports, load_saved_vendor_code, save_vendor_code, save_selected_port, load_saved_port, \
+    save_tests_counter, load_tests_counter
 from configuration import EditSwitchDialog, AddSwitchDialog, DelSwitchDialog
 from data_processing import data_processing
 from users import add_user, del_user
-from terminal import TerminalWindow
-
 
 
 
 class MainWindow(QMainWindow):
     updateTableSignal = pyqtSignal(int, list, dict)
+
     def __init__(self):
         super().__init__()
         self.setWindowTitle("CamSwitch Tester")
@@ -31,12 +31,7 @@ class MainWindow(QMainWindow):
         self.update_tests_counter_label()
         load_saved_vendor_code(self.line_edit_vendor_code)
         load_saved_port(self.combo_box_ports)
-
-
-
-
-
-
+        self.stop_event = threading.Event()
 
     def init_toolbar(self):
         toolbar = QToolBar()
@@ -90,7 +85,6 @@ class MainWindow(QMainWindow):
         self.user_combobox.setFixedWidth(115)
         toolbar.addWidget(self.user_combobox)
 
-
         self.update_user_combobox()
 
         self.setCentralWidget(QWidget())
@@ -105,17 +99,23 @@ class MainWindow(QMainWindow):
         self.line_edit_vendor_code.setCompleter(self.create_completer())
         self.search_button = QPushButton("Найти", self.vendor_selection)
         self.start_button = QPushButton("Старт", self.vendor_selection)
+        self.stop_button = QPushButton("Стоп", self.vendor_selection)
+        self.clear_button = QPushButton("Очистить консоль вывода", self.vendor_selection)
         self.reset_counter_button = QPushButton("Сброс счетчика", self.vendor_selection)
 
         self.label_vendor_code.setFixedWidth(210)
         self.line_edit_vendor_code.setFixedWidth(300)
         self.search_button.setFixedWidth(75)
         self.start_button.setFixedWidth(75)
+        self.stop_button.setFixedWidth(75)
+        self.clear_button.setFixedWidth(175)
 
         vendor_selection_layout.addWidget(self.label_vendor_code)
         vendor_selection_layout.addWidget(self.line_edit_vendor_code)
         vendor_selection_layout.addWidget(self.search_button)
         vendor_selection_layout.addWidget(self.start_button)
+        vendor_selection_layout.addWidget(self.stop_button)
+        vendor_selection_layout.addWidget(self.clear_button)
 
         self.label_select_port = QLabel("Выберите порт:", self.vendor_selection)
         self.combo_box_ports = QComboBox(self.vendor_selection)
@@ -128,9 +128,11 @@ class MainWindow(QMainWindow):
 
         self.line_edit_vendor_code.returnPressed.connect(self.retrieve_switch_data)
         self.search_button.clicked.connect(self.retrieve_switch_data)
+        self.search_button.clicked.connect(self.clear_message_widget)
         self.start_button.clicked.connect(self.run_data_processing)
+        self.stop_button.clicked.connect(self.stop_data_processing)
+        self.clear_button.clicked.connect(self.clear_message_widget)
         self.start_button.clicked.connect(self.init_layout)
-
 
         # Получаем список открытых портов и добавляем их в выпадающий список
         open_ports = get_open_com_ports()
@@ -140,8 +142,6 @@ class MainWindow(QMainWindow):
         self.label_tests_counter = QLabel("Тестов выполнено: 0", self.vendor_selection)
         self.label_tests_counter.setFixedWidth(170)
         vendor_selection_layout.addWidget(self.label_tests_counter)
-
-
 
     def reset_tests_counter(self):
         self.tests_counter = 0
@@ -246,26 +246,6 @@ class MainWindow(QMainWindow):
         # Добавляем виджет сообщений в макет
         main_layout.addWidget(message_scroll_area)
 
-        # terminal_widget = QWidget()
-        # terminal_layout = QVBoxLayout(terminal_widget)
-        # terminal_layout.setContentsMargins(0, 0, 0, 0)
-        #
-        # terminal_title = QLabel("Протокол теста")
-        # terminal_title.setStyleSheet("font-weight: bold;")
-
-        # terminal_text_edit = TerminalWindow()
-        # # terminal_text_edit.setFixedHeight(400)
-        # #
-        # terminal_layout.addWidget(terminal_title)
-        # terminal_layout.addWidget(terminal_text_edit)
-        #
-        # main_layout.addWidget(terminal_widget)
-
-        # Добавляем кнопку для очистки окна терминала
-        # clear_button = QPushButton("Очистить")
-        # clear_button.clicked.connect(terminal_text_edit.clear_terminal)
-        # main_layout.addWidget(clear_button)
-
         # Устанавливаем политики размера для центрального виджета
         main_layout.setContentsMargins(5, 5, 5, 5)  # Устанавливаем отступы макета
         main_layout.setSpacing(10)  # Устанавливаем отступ между виджетами
@@ -296,7 +276,7 @@ class MainWindow(QMainWindow):
         # Создаем отдельный поток для выполнения длительных операций
 
         processing_thread = threading.Thread(
-            target=data_processing, args=(port, vendor_code, self)
+            target=data_processing, args=(port, vendor_code, self.stop_event, self)
         )
         processing_thread.start()
 
@@ -308,6 +288,12 @@ class MainWindow(QMainWindow):
         self.user_combobox.clear()
         self.user_combobox.addItems(users)
 
+    def stop_data_processing(self):
+        # Установить событие stop_event для остановки выполнения data_processing
+        self.stop_event.set()
+        self.retrieve_switch_data()
+
+
     def add_user(self):
         add_user(self)
         self.update_user_combobox()
@@ -318,6 +304,9 @@ class MainWindow(QMainWindow):
 
     def add_message_to_widget(self, message):
         self.message_widget.append(message)
+
+    def clear_message_widget(self):
+        self.message_widget.clear()
 
     @pyqtSlot(int, list, dict)
     def update_table_with_results_slot(self, position, switch_data, measured_data):
@@ -353,11 +342,9 @@ class MainWindow(QMainWindow):
                     item.setTextAlignment(Qt.AlignCenter)
                     item.setText(f"{contact2}")
 
+
 if __name__ == '__main__':
     app = QApplication([])
     window = MainWindow()
     window.show()
     app.exec()
-
-
-

@@ -3,6 +3,8 @@ import json
 import math
 from time import sleep
 import pickle
+import keyboard
+from PyQt5.QtWidgets import QMessageBox
 
 SPACE_KEY = b' '
 NEXT_POSITION_SIGNAL = b'\x89'
@@ -76,36 +78,52 @@ def check_position(switch_data, measured_data):
     return incorrect_closed, incorrect_opened
 
 
-def read_data(ser, expected_data):
+def read_data(ser, expected_data, stop_event):
     while True:
-        data = ser.read()
-        if data == expected_data:
+        if stop_event.is_set():
             break
 
-def read_data_return(ser, expected_data):
+        if ser.in_waiting > 0:
+            data = ser.read()
+            if data == expected_data:
+                break
+
+
+
+
+def read_data_return(ser, expected_data, stop_event):
     while True:
-        data = ser.read()
-        if data == expected_data:
+        if stop_event.is_set():
             break
-        elif data == RESET_SIGNAL:
-            print('Сигнал сброс получен!')
-            return RESET_SIGNAL
+
+        if ser.in_waiting > 0:
+            data = ser.read()
+            if data == expected_data:
+                break
+            elif data == RESET_SIGNAL:
+                print('Сигнал сброс получен!')
+                return RESET_SIGNAL
+
     return expected_data
-
 def send_command(ser, command):
     sleep(0.05)
     ser.write(command)
 
 
-def check_switch(ser):
+def check_switch(ser, stop_event):
     while True:
-        data = ser.read()
-        if data == NEXT_POSITION_SIGNAL or data == SPACE_KEY:
+        if stop_event.is_set() or keyboard.is_pressed(' '):
             break
-        elif data == RESET_SIGNAL:
-            print('Сигнал сброс получен!')
-            return RESET_SIGNAL
-    return data
+
+        if ser.in_waiting > 0:
+            data = ser.read()
+            if data == NEXT_POSITION_SIGNAL:
+                break
+            elif data == RESET_SIGNAL:
+                print('Сигнал сброс получен!')
+                return RESET_SIGNAL
+
+            return data
 def process_position(ser, switch_data, contacts_count, position, instance):
     measured_data = {}
     for i in range(1, contacts_count):
@@ -136,7 +154,7 @@ def process_position(ser, switch_data, contacts_count, position, instance):
         return position
     else:
         print(f"Положение {position} собрано некорректно. Некорректные контакты:")
-        instance.add_message_to_widget(f"Положение {position} собрано некорректно. Некорректные контакты:")
+        instance.add_message_to_widget(f"\nПоложение {position} собрано некорректно. Некорректные контакты:")
         for closed_contact in incorrect_closed:
             print(f"Замкнуты контакты {closed_contact[0]} и {closed_contact[1]}")
             instance.add_message_to_widget(f"Положение {position} собрано некорректно. Некорректные контакты:")
