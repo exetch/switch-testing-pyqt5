@@ -56,7 +56,7 @@ def process_position(ser, switch_data, contacts_count, position, instance):
         for opened_contact in incorrect_opened:
             print(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
         send_command(ser, INCORRECTNESS_COMMAND)
-        return None
+        return []
 
 
 
@@ -93,9 +93,8 @@ def run_data_processing(port, vendor_code, instance):
     correct_positions = []
 
     for position in range(1, switch_data['positions'] + 1):
-        correct_position = process_position(ser, switch_data, contacts_count, position, instance)
-        if correct_position is not None:
-            correct_positions.append(correct_position)
+        if process_position(ser, switch_data, contacts_count, position, instance):
+            correct_positions.append(position)
         check_switch(ser)
 
     if len(correct_positions) == switch_data['positions']:

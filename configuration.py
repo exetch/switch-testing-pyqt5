@@ -19,7 +19,7 @@ class AddSwitchDialog(QDialog):
         self.button_save_switch = QPushButton("Сохранить переключатель", self)
         self.button_previous_position = QPushButton("Вернуться к предыдущему положению", self)
 
-        self.table = QTableWidget(24, 2)  # Создаем таблицу с 24 строками и 2 столбцами
+        self.table = QTableWidget(48, 2)  # Создаем таблицу с 48 строками и 2 столбцами
         self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])  # Задаем названия столбцов
         self.table.verticalHeader().setVisible(False)  # Убираем нумерацию строк
 
@@ -127,7 +127,7 @@ class EditSwitchDialog(QDialog):
         self.button_save_switch = QPushButton("Сохранить переключатель", self)
         self.button_previous_position = QPushButton("Вернуться к предыдущему положению", self)
 
-        self.table = QTableWidget(24, 2)  # Создаем таблицу с 24 строками и 2 столбцами
+        self.table = QTableWidget(48, 2)  # Создаем таблицу с 48 строками и 2 столбцами
         self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])  # Задаем названия столбцов
         self.table.verticalHeader().setVisible(False)  # Убираем нумерацию строк
 

@@ -2,9 +2,13 @@ import serial.tools.list_ports
 import json
 import math
 from time import sleep
+import pickle
 
 SPACE_KEY = b' '
 NEXT_POSITION_SIGNAL = b'\x89'
+CORRECTNESS_COMMAND = b'\x83'
+INCORRECTNESS_COMMAND = b'\x84'
+RESET_SIGNAL = b'\x80'
 FILENAME = 'switches_data.json'
 
 
@@ -78,9 +82,18 @@ def read_data(ser, expected_data):
         if data == expected_data:
             break
 
+def read_data_return(ser, expected_data):
+    while True:
+        data = ser.read()
+        if data == expected_data:
+            break
+        elif data == RESET_SIGNAL:
+            print('Сигнал сброс получен!')
+            return RESET_SIGNAL
+    return expected_data
 
 def send_command(ser, command):
-    sleep(0.5)
+    sleep(0.05)
     ser.write(command)
 
 
@@ -89,3 +102,93 @@ def check_switch(ser):
         data = ser.read()
         if data == NEXT_POSITION_SIGNAL or data == SPACE_KEY:
             break
+        elif data == RESET_SIGNAL:
+            print('Сигнал сброс получен!')
+            return RESET_SIGNAL
+    return data
+def process_position(ser, switch_data, contacts_count, position, instance):
+    measured_data = {}
+    for i in range(1, contacts_count):
+        first_contact_byte = ser.read()
+        first_contact_number = first_contact_byte[0] & 0x3F
+
+        contact_status = {}
+        while True:
+            contact_byte = ser.read()
+            if contact_byte == b'\x86':
+                break
+
+            contact_number = contact_byte[0] & 0x3F
+
+            contact_state = (contact_byte[0] & 0xC0) >> 6
+            contact_status[contact_number] = contact_state
+
+        measured_data[first_contact_number] = contact_status
+
+    incorrect_closed, incorrect_opened = check_position(switch_data[f'position_{position}'], measured_data)
+    instance.updateTableSignal.emit(position, switch_data[f'position_{position}'], measured_data)
+
+
+    if len(incorrect_closed) == 0 and len(incorrect_opened) == 0:
+        print(f"В положении {position} все хорошо. Положение собрано корректно")
+        instance.add_message_to_widget(f"В положении {position} все хорошо. Положение собрано корректно")
+        send_command(ser, CORRECTNESS_COMMAND)
+        return position
+    else:
+        print(f"Положение {position} собрано некорректно. Некорректные контакты:")
+        instance.add_message_to_widget(f"Положение {position} собрано некорректно. Некорректные контакты:")
+        for closed_contact in incorrect_closed:
+            print(f"Замкнуты контакты {closed_contact[0]} и {closed_contact[1]}")
+            instance.add_message_to_widget(f"Положение {position} собрано некорректно. Некорректные контакты:")
+        for opened_contact in incorrect_opened:
+            print(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
+            instance.add_message_to_widget(f"Разомкнуты контакты {opened_contact[0]} и {opened_contact[1]}")
+        send_command(ser, INCORRECTNESS_COMMAND)
+        return []
+
+
+
+def load_saved_vendor_code(line_edit_vendor_code):
+    try:
+        with open('saved_vendor_code.pickle', 'rb') as file:
+            saved_code = pickle.load(file)
+        if saved_code:
+            line_edit_vendor_code.setText(saved_code)
+    except (FileNotFoundError, EOFError):
+        pass
+
+
+def save_vendor_code(line_edit_vendor_code):
+    vendor_code = line_edit_vendor_code.text()
+    with open("saved_vendor_code.pickle", 'wb') as file:
+        pickle.dump(vendor_code, file)
+
+def save_selected_port(combo_box_ports):
+    selected_port = combo_box_ports.currentText()
+    with open('saved_port.pickle', 'wb') as file:
+        pickle.dump(selected_port, file)
+
+def load_saved_port(combo_box_ports):
+    try:
+        with open('saved_port.pickle', 'rb') as file:
+            saved_port = pickle.load(file)
+        if saved_port:
+            index = combo_box_ports.findText(saved_port)
+            if index != -1:
+                combo_box_ports.setCurrentIndex(index)
+    except (FileNotFoundError, EOFError):
+        pass
+
+def save_tests_counter(tests_counter):
+    with open("tests_counter.pkl", "wb") as file:
+        pickle.dump(tests_counter, file)
+
+def load_tests_counter():
+    try:
+        with open("tests_counter.pkl", "rb") as file:
+            if file.peek(1):
+                return pickle.load(file)
+            else:
+                return 0
+    except (FileNotFoundError, EOFError):
+        return 0
