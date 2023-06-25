@@ -20,7 +20,6 @@ def data_processing(port, vendor_code, stop_event, instance):
     baudrate = 256000
     ser = serial.Serial(port, baudrate)
     while True:
-
         read_data(ser, RESET_SIGNAL, stop_event)
         if stop_event.is_set():
             stop_event.clear()
@@ -29,6 +28,7 @@ def data_processing(port, vendor_code, stop_event, instance):
         print('Сигнал сброс получен!')
         instance.add_message_to_widget('Сигнал сброс получен!')
         instance.tests_counter += 1
+        instance.clear_message_widget()
         instance.update_tests_counter_label()
         instance.retrieve_switch_data()
         while True:
