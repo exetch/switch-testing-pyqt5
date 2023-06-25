@@ -98,7 +98,7 @@ class AddSwitchDialog(QDialog):
         except FileNotFoundError:
             data = []  # Если файл не найден, начинаем с пустого списка
         data.append(self.switch_data)  # Добавляем новый переключатель к данным
-        with open(filename, "w") as file:
+        with open(filename, "w", encoding='utf-8') as file:
             json.dump(data, file, indent=4,
                       separators=(", ", ": "))  # Записываем все данные в файл с желаемым форматированием
         self.parent().update_vendor_selection()
@@ -256,7 +256,7 @@ class EditSwitchDialog(QDialog):
         self.switch_data['positions'] = positions
         self.switch_data[f"position_{self.current_position}"] = contacts
 
-        with open('switches_data.json', 'r') as file:
+        with open('switches_data.json', 'r', encoding='utf-8') as file:
             data = json.load(file)
 
         for i, switch in enumerate(data):
