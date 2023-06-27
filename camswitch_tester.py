@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QMenu, QWidget, QLabel, QLineEdit, QCompleter, QTableWidget, \
     QTableWidgetItem, QVBoxLayout, QPushButton, QApplication, QHBoxLayout, QComboBox, QSplitter, QSizePolicy, QTextEdit, \
     QScrollArea
-from PyQt5.QtCore import Qt, QObject, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, QMetaObject, pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QColor
 import json
 import threading
@@ -306,7 +306,7 @@ class MainWindow(QMainWindow):
         self.message_widget.append(message)
 
     def clear_message_widget(self):
-        self.message_widget.clear()
+        QMetaObject.invokeMethod(self.message_widget, "clear")
 
     @pyqtSlot(int, list, dict)
     def update_table_with_results_slot(self, position, switch_data, measured_data):

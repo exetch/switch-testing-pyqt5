@@ -4,7 +4,6 @@ import math
 from time import sleep
 import pickle
 import keyboard
-from PyQt5.QtWidgets import QMessageBox
 
 SPACE_KEY = b' '
 NEXT_POSITION_SIGNAL = b'\x89'
@@ -80,20 +79,20 @@ def check_position(switch_data, measured_data):
 
 def read_data(ser, expected_data, stop_event):
     while True:
-        if stop_event.is_set():
+        if stop_event.is_set() or keyboard.is_pressed(' '):
             break
 
-        if ser.in_waiting > 0:
-            data = ser.read()
-            if data == expected_data:
-                break
+        # if ser.in_waiting > 0:
+        #     data = ser.read()
+        #     if data == expected_data:
+        #         break
 
 
 
 
 def read_data_return(ser, expected_data, stop_event):
     while True:
-        if stop_event.is_set():
+        if stop_event.is_set() or keyboard.is_pressed(' '):
             break
 
         if ser.in_waiting > 0:
@@ -122,7 +121,6 @@ def check_switch(ser, stop_event):
             elif data == RESET_SIGNAL:
                 print('Сигнал сброс получен!')
                 return RESET_SIGNAL
-
             return data
 def process_position(ser, switch_data, contacts_count, position, instance):
     measured_data = {}

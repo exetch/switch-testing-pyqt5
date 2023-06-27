@@ -1,4 +1,3 @@
-from PyQt5.QtWidgets import QMessageBox
 import serial
 from utils import get_contact_count, get_switch_data, read_data, send_command, check_switch, process_position, \
     read_data_return
@@ -14,19 +13,19 @@ CONTACTS_COUNT = b'\x88'
 NEXT_POSITION_SIGNAL = b'\x89'
 SPACE_KEY = b' '
 
+
 def data_processing(port, vendor_code, stop_event, instance):
     reset_signal_received = False
 
     baudrate = 256000
     ser = serial.Serial(port, baudrate)
     while True:
+        instance.add_message_to_widget('Старт теста! Нажмите пробел')
         read_data(ser, RESET_SIGNAL, stop_event)
         if stop_event.is_set():
             stop_event.clear()
-            instance.add_message_to_widget('\nПринят сигнал стоп')
             break
         print('Сигнал сброс получен!')
-        instance.add_message_to_widget('Сигнал сброс получен!')
         instance.tests_counter += 1
         instance.clear_message_widget()
         instance.update_tests_counter_label()
@@ -94,8 +93,6 @@ def data_processing(port, vendor_code, stop_event, instance):
                         print(f"Положение {position}")
                         instance.add_message_to_widget(f"Положение {position}")
 
-
             break
     ser.close()
     instance.add_message_to_widget('Порт закрыт, тестирование завершено')
-
