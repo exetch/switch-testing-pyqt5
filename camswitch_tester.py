@@ -6,6 +6,11 @@ from PyQt5.QtGui import QColor, QFont
 import json
 import threading
 import sys
+from utils import get_open_com_ports, load_saved_vendor_code, save_vendor_code, save_selected_port, load_saved_port, \
+    save_tests_counter, load_tests_counter
+from configuration import EditSwitchDialog, AddSwitchDialog, DelSwitchDialog
+from data_processing import data_processing
+from users import add_user, del_user
 
 
 
