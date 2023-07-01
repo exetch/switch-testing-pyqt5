@@ -19,9 +19,9 @@ class AddSwitchDialog(QDialog):
         self.button_save_switch = QPushButton("Сохранить переключатель", self)
         self.button_previous_position = QPushButton("Вернуться к предыдущему положению", self)
 
-        self.table = QTableWidget(48, 2)  # Создаем таблицу с 48 строками и 2 столбцами
-        self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])  # Задаем названия столбцов
-        self.table.verticalHeader().setVisible(False)  # Убираем нумерацию строк
+        self.table = QTableWidget(48, 2)
+        self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])
+        self.table.verticalHeader().setVisible(False)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label_vendor_code)
@@ -35,14 +35,14 @@ class AddSwitchDialog(QDialog):
 
         self.setLayout(layout)
 
-        self.current_position = 1  # Первое положение
+        self.current_position = 1
         self.switch_data = {
             "vendor_code": "",
             "positions": 0,
             "position_1": []
         }
 
-        self.setWindowTitle(f"Добавить переключатель - Положение {self.current_position}")  # Устанавливаем заголовок сразу
+        self.setWindowTitle(f"Добавить переключатель - Положение {self.current_position}")
 
         self.button_next_position.clicked.connect(self.save_and_next_position)
         self.button_save_switch.clicked.connect(self.save_switch)
@@ -94,13 +94,13 @@ class AddSwitchDialog(QDialog):
         filename = "switches_data.json"
         try:
             with open(filename, "r") as file:
-                data = json.load(file)  # Загружаем существующие данные из файла
+                data = json.load(file)
         except FileNotFoundError:
-            data = []  # Если файл не найден, начинаем с пустого списка
-        data.append(self.switch_data)  # Добавляем новый переключатель к данным
+            data = []
+        data.append(self.switch_data)
         with open(filename, "w", encoding='utf-8') as file:
             json.dump(data, file, indent=4,
-                      separators=(", ", ": "))  # Записываем все данные в файл с желаемым форматированием
+                      separators=(", ", ": "))
         self.parent().update_vendor_selection()
         QMessageBox.information(self, "Информация", "Переключатель сохранен")
 
@@ -114,7 +114,7 @@ class EditSwitchDialog(QDialog):
 
         self.label_vendor_code = QLabel("Введите артикул переключателя:", self)
         self.line_edit_vendor_code = QLineEdit(self)
-        self.line_edit_vendor_code.setCompleter(self.create_completer())  # Устанавливаем автодополнение
+        self.line_edit_vendor_code.setCompleter(self.create_completer())
 
         self.button_search = QPushButton("Поиск", self)
         self.button_search.clicked.connect(self.search_switch)
@@ -127,9 +127,9 @@ class EditSwitchDialog(QDialog):
         self.button_save_switch = QPushButton("Сохранить переключатель", self)
         self.button_previous_position = QPushButton("Вернуться к предыдущему положению", self)
 
-        self.table = QTableWidget(48, 2)  # Создаем таблицу с 48 строками и 2 столбцами
-        self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])  # Задаем названия столбцов
-        self.table.verticalHeader().setVisible(False)  # Убираем нумерацию строк
+        self.table = QTableWidget(48, 2)
+        self.table.setHorizontalHeaderLabels(["Контакт 1", "Контакт 2"])
+        self.table.verticalHeader().setVisible(False)
 
         layout = QVBoxLayout()
         layout.addWidget(self.label_vendor_code)
@@ -144,7 +144,7 @@ class EditSwitchDialog(QDialog):
 
         self.setLayout(layout)
 
-        self.current_position = 1  # Первое положение
+        self.current_position = 1
         self.switch_data ={}
 
         self.button_next_position.clicked.connect(self.save_and_next_position)
@@ -167,11 +167,11 @@ class EditSwitchDialog(QDialog):
             matching_switches = [switch for switch in data if switch['vendor_code'] == vendor_code]
             if matching_switches:
                 self.switch_data = matching_switches[0]
-                self.line_edit_vendor_code.setEnabled(False)  # Блокируем редактирование артикула
-                self.line_edit_vendor_code.setText(vendor_code)  # Выводим артикул на форму
+                self.line_edit_vendor_code.setEnabled(False)
+                self.line_edit_vendor_code.setText(vendor_code)
                 self.combo_box_positions.setCurrentText(
-                    str(self.switch_data['positions']))  # Устанавливаем количество положений
-                self.populate_table()  # Заполняем таблицу данными
+                    str(self.switch_data['positions']))
+                self.populate_table()
                 self.setWindowTitle(f"Редактировать переключатель - {vendor_code} (Положение 1)")
             else:
                 QMessageBox.critical(self, "Ошибка", "Переключатель не найден")
@@ -179,7 +179,6 @@ class EditSwitchDialog(QDialog):
     def populate_table(self):
         positions = self.switch_data['positions']
 
-        # Очищаем таблицу перед заполнением
         self.table.clearContents()
 
         if positions > 1:
@@ -193,7 +192,6 @@ class EditSwitchDialog(QDialog):
                     self.table.setItem(row, 0, contact_1)
                     self.table.setItem(row, 1, contact_2)
             else:
-                # Очищаем таблицу, если нет замкнутых контактов в текущем положении
                 self.table.clearContents()
 
     def save_and_next_position(self):
@@ -239,7 +237,6 @@ class EditSwitchDialog(QDialog):
     def save_switch(self):
         positions = int(self.combo_box_positions.currentText())
 
-        # Удаление данных для удаленных положений
         for position in range(positions + 1, self.switch_data['positions'] + 1):
             if f"position_{position}" in self.switch_data:
                 del self.switch_data[f"position_{position}"]
@@ -269,7 +266,6 @@ class EditSwitchDialog(QDialog):
 
         QMessageBox.information(self, "Информация", "Переключатель сохранен")
 
-        # Обновляем данные в форме, если количество положений изменилось
         self.current_position = 1
         self.switch_data = None
         self.line_edit_vendor_code.setEnabled(True)
@@ -334,7 +330,7 @@ class ContactWidgetItem(QTableWidgetItem):
     def __init__(self, contacts):
         super().__init__()
         self.contacts = contacts
-        self.setFlags(self.flags() & ~Qt.ItemIsEditable)  # Запрещаем редактирование ячейки
+        self.setFlags(self.flags() & ~Qt.ItemIsEditable)
 
     def setData(self, role, value):
         if role == Qt.UserRole:

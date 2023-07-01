@@ -1,7 +1,6 @@
 import serial
 from time import sleep
 from utils import get_switch_data, get_contact_count, check_position
-
 RESET_SIGNAL = b'\x80'
 READY_SIGNAL = b'\x87'
 START_MEASUREMENT_COMMAND = b'\x82'
