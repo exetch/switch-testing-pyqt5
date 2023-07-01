@@ -50,7 +50,6 @@ def data_processing(port, vendor_code, stop_event, instance):
                 print("Команда выставления количества контактов отправлена.")
             else:
                 print("Не удалось получить данные о количестве контактов.")
-
             if read_data_return(ser, READY_SIGNAL, stop_event) == RESET_SIGNAL:
                 if stop_event.is_set():
                     stop_event.clear()

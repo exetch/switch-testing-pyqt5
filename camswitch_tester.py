@@ -2,14 +2,10 @@ from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QMenu, QWidget, QLab
     QTableWidgetItem, QVBoxLayout, QPushButton, QApplication, QHBoxLayout, QComboBox, QSplitter, QSizePolicy, QTextEdit, \
     QScrollArea
 from PyQt5.QtCore import Qt, QMetaObject, pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QFont
 import json
 import threading
-from utils import get_open_com_ports, load_saved_vendor_code, save_vendor_code, save_selected_port, load_saved_port, \
-    save_tests_counter, load_tests_counter
-from configuration import EditSwitchDialog, AddSwitchDialog, DelSwitchDialog
-from data_processing import data_processing
-from users import add_user, del_user
+import sys
 
 
 
@@ -29,7 +25,7 @@ class MainWindow(QMainWindow):
         self.updateTableSignal.connect(self.update_table_with_results_slot)
         self.tests_counter = load_tests_counter()
         self.update_tests_counter_label()
-        load_saved_vendor_code(self.line_edit_vendor_code)
+        load_saved_vendor_code(self.combo_box_vendor_code)
         load_saved_port(self.combo_box_ports)
         self.stop_event = threading.Event()
 
@@ -94,9 +90,11 @@ class MainWindow(QMainWindow):
 
         vendor_selection_layout = QHBoxLayout(self.vendor_selection)
 
-        self.label_vendor_code = QLabel("Введите артикул переключателя:", self.vendor_selection)
-        self.line_edit_vendor_code = QLineEdit(self.vendor_selection)
-        self.line_edit_vendor_code.setCompleter(self.create_completer())
+        self.label_vendor_code = QLabel("Выберите артикул переключателя:", self.vendor_selection)
+        self.combo_box_vendor_code = QComboBox(self.vendor_selection)
+        self.combo_box_vendor_code.setEditable(True)
+        self.combo_box_vendor_code.setCompleter(self.create_completer_old())
+        self.create_completer()
         self.search_button = QPushButton("Найти", self.vendor_selection)
         self.start_button = QPushButton("Старт", self.vendor_selection)
         self.stop_button = QPushButton("Стоп", self.vendor_selection)
@@ -104,14 +102,15 @@ class MainWindow(QMainWindow):
         self.reset_counter_button = QPushButton("Сброс счетчика", self.vendor_selection)
 
         self.label_vendor_code.setFixedWidth(210)
-        self.line_edit_vendor_code.setFixedWidth(300)
+        self.combo_box_vendor_code.setFixedWidth(300)
+        self.combo_box_vendor_code.view().setFixedHeight(500)
         self.search_button.setFixedWidth(75)
         self.start_button.setFixedWidth(75)
         self.stop_button.setFixedWidth(75)
         self.clear_button.setFixedWidth(175)
 
         vendor_selection_layout.addWidget(self.label_vendor_code)
-        vendor_selection_layout.addWidget(self.line_edit_vendor_code)
+        vendor_selection_layout.addWidget(self.combo_box_vendor_code)
         vendor_selection_layout.addWidget(self.search_button)
         vendor_selection_layout.addWidget(self.start_button)
         vendor_selection_layout.addWidget(self.stop_button)
@@ -126,7 +125,7 @@ class MainWindow(QMainWindow):
 
         vendor_selection_layout.addStretch(1)
 
-        self.line_edit_vendor_code.returnPressed.connect(self.retrieve_switch_data)
+        self.combo_box_vendor_code.lineEdit().returnPressed.connect(self.retrieve_switch_data)
         self.search_button.clicked.connect(self.retrieve_switch_data)
         self.search_button.clicked.connect(self.clear_message_widget)
         self.start_button.clicked.connect(self.run_data_processing)
@@ -143,6 +142,7 @@ class MainWindow(QMainWindow):
         self.label_tests_counter.setFixedWidth(170)
         vendor_selection_layout.addWidget(self.label_tests_counter)
 
+
     def reset_tests_counter(self):
         self.tests_counter = 0
         self.update_tests_counter_label()
@@ -156,8 +156,16 @@ class MainWindow(QMainWindow):
         self.table_widget.setGeometry(0, 100, 1400, 700)
         self.table_widget.setFixedHeight(250)
         self.table_widget.verticalHeader().setVisible(False)
+        header_style = "QHeaderView::section { background-color: rgb(135, 206, 250); }"  # Голубой цвет (RGB: 135, 206, 250)
+        self.table_widget.setStyleSheet(header_style)
 
     def create_completer(self):
+        with open('switches_data.json', 'r') as file:
+            data = json.load(file)
+            vendor_codes = [switch['vendor_code'] for switch in data]
+            self.combo_box_vendor_code.addItems(vendor_codes)
+
+    def create_completer_old(self):
         with open('switches_data.json', 'r') as file:
             data = json.load(file)
             vendor_codes = [switch['vendor_code'] for switch in data]
@@ -166,8 +174,8 @@ class MainWindow(QMainWindow):
             return completer
 
     def retrieve_switch_data(self):
-        vendor_code = self.line_edit_vendor_code.text()
-        save_vendor_code(self.line_edit_vendor_code)
+        vendor_code = self.combo_box_vendor_code.currentText()
+        save_vendor_code(self.combo_box_vendor_code)
         save_selected_port(self.combo_box_ports)
         with open('switches_data.json', 'r') as file:
             data = json.load(file)
@@ -184,7 +192,8 @@ class MainWindow(QMainWindow):
         self.table_widget.setRowCount(positions)
         self.table_widget.setColumnCount(49)
 
-        self.table_widget.setHorizontalHeaderLabels(['Номер положения'] + [str(i) for i in range(1, 49)])
+        header_labels = ['Номер положения'] + [str(i) for i in range(1, 49)]
+        self.table_widget.setHorizontalHeaderLabels(header_labels)
 
         for position in range(1, positions + 1):
             position_key = f"position_{position}"
@@ -210,13 +219,12 @@ class MainWindow(QMainWindow):
 
         main_layout = QVBoxLayout(central_widget)
 
-        splitter = QSplitter(Qt.Vertical)  # Создаем вертикальный разделитель
-        splitter.addWidget(self.table_widget)  # Добавляем table_widget в разделитель
+        splitter = QSplitter(Qt.Vertical)
+        splitter.addWidget(self.table_widget)
 
-        main_layout.addWidget(self.vendor_selection)  # Добавляем vendor_selection в макет
-        main_layout.addWidget(splitter)  # Добавляем разделитель в макет
+        main_layout.addWidget(self.vendor_selection)
+        main_layout.addWidget(splitter)
 
-        # Добавляем информацию о контактах
         contact_info_widget = QWidget()
         contact_info_layout = QHBoxLayout(contact_info_widget)
         contact_info_layout.setContentsMargins(20, 10, 0, 10)
@@ -237,20 +245,16 @@ class MainWindow(QMainWindow):
             contact_info_layout.addWidget(color_rect)
             contact_info_layout.addWidget(color_label)
 
-        main_layout.addWidget(contact_info_widget)  # Добавляем информацию о контактах в макет
-        # Создаем виджет для прокрутки сообщений
+        main_layout.addWidget(contact_info_widget)
         message_scroll_area = QScrollArea()
         message_scroll_area.setWidgetResizable(True)
         message_scroll_area.setWidget(self.message_widget)
 
-        # Добавляем виджет сообщений в макет
         main_layout.addWidget(message_scroll_area)
 
-        # Устанавливаем политики размера для центрального виджета
-        main_layout.setContentsMargins(5, 5, 5, 5)  # Устанавливаем отступы макета
-        main_layout.setSpacing(10)  # Устанавливаем отступ между виджетами
+        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setSpacing(10)
 
-        # Устанавливаем политики размера для table_widget
         self.table_widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
     def open_add_switch_dialog(self):
@@ -271,9 +275,8 @@ class MainWindow(QMainWindow):
 
     def run_data_processing(self):
         port = self.combo_box_ports.currentText()
-        vendor_code = self.line_edit_vendor_code.text()
+        vendor_code = self.combo_box_vendor_code.currentText()
 
-        # Создаем отдельный поток для выполнения длительных операций
 
         processing_thread = threading.Thread(
             target=data_processing, args=(port, vendor_code, self.stop_event, self)
@@ -289,7 +292,6 @@ class MainWindow(QMainWindow):
         self.user_combobox.addItems(users)
 
     def stop_data_processing(self):
-        # Установить событие stop_event для остановки выполнения data_processing
         self.stop_event.set()
         self.retrieve_switch_data()
 
@@ -335,16 +337,28 @@ class MainWindow(QMainWindow):
                 ):
                     item = self.table_widget.item(position - 1, contact1)
                     if item is None:
-                        item = QTableWidgetItem()  # Создание нового объекта QTableWidgetItem
+                        item = QTableWidgetItem()
                         self.table_widget.setItem(position - 1, contact1,
-                                                  item)  # Установка нового объекта QTableWidgetItem
+                                                  item)
                     item.setBackground(QColor("yellow"))
                     item.setTextAlignment(Qt.AlignCenter)
                     item.setText(f"{contact2}")
 
+    def closeEvent(self, event):
+        self.stop_event.set()
+        self.processing_thread.join()
 
-if __name__ == '__main__':
-    app = QApplication([])
+        if self.ser.is_open:
+            self.ser.close()
+
+        super().closeEvent(event)
+
+def main():
+    app = QApplication(sys.argv)
     window = MainWindow()
     window.show()
-    app.exec()
+    sys.exit(app.exec_())
+
+
+if __name__ == '__main__':
+    main()

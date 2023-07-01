@@ -164,18 +164,19 @@ def process_position(ser, switch_data, contacts_count, position, instance):
 
 
 
-def load_saved_vendor_code(line_edit_vendor_code):
+def load_saved_vendor_code(combo_box_vendor_code):
     try:
         with open('saved_vendor_code.pickle', 'rb') as file:
             saved_code = pickle.load(file)
         if saved_code:
-            line_edit_vendor_code.setText(saved_code)
+            combo_box_vendor_code.setCurrentText(saved_code)
     except (FileNotFoundError, EOFError):
         pass
 
 
-def save_vendor_code(line_edit_vendor_code):
-    vendor_code = line_edit_vendor_code.text()
+
+def save_vendor_code(combo_box_vendor_code):
+    vendor_code = combo_box_vendor_code.currentText()
     with open("saved_vendor_code.pickle", 'wb') as file:
         pickle.dump(vendor_code, file)
 
