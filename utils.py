@@ -80,6 +80,7 @@ def check_position(switch_data, measured_data):
 def read_data(ser, expected_data, stop_event):
     while True:
         if stop_event.is_set() or keyboard.is_pressed(' '):
+            sleep(0.05)
             break
 
         # if ser.in_waiting > 0:
@@ -93,6 +94,7 @@ def read_data(ser, expected_data, stop_event):
 def read_data_return(ser, expected_data, stop_event):
     while True:
         if stop_event.is_set() or keyboard.is_pressed(' '):
+            sleep(0.05)
             break
 
         if ser.in_waiting > 0:
@@ -112,6 +114,7 @@ def send_command(ser, command):
 def check_switch(ser, stop_event):
     while True:
         if stop_event.is_set() or keyboard.is_pressed(' '):
+            sleep(0.05)
             break
 
         if ser.in_waiting > 0:
@@ -206,6 +209,12 @@ def load_tests_counter():
             if file.peek(1):
                 return pickle.load(file)
             else:
-                return 0
+                return {}
     except (FileNotFoundError, EOFError):
-        return 0
+        return {}
+
+def update_user_tests_counter(username, tests_count):
+    tests_counter = load_tests_counter()
+    tests_counter[username] = tests_count
+    save_tests_counter(tests_counter)
+

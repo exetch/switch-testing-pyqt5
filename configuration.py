@@ -102,6 +102,7 @@ class AddSwitchDialog(QDialog):
             json.dump(data, file, indent=4,
                       separators=(", ", ": "))
         self.parent().update_vendor_selection()
+        self.parent().update_completer_old()
         QMessageBox.information(self, "Информация", "Переключатель сохранен")
 
         self.close()
@@ -321,6 +322,7 @@ class DelSwitchDialog(QDialog):
                 with open('switches_data.json', 'w') as file:
                     json.dump(data, file, indent=4)
                 self.parent().update_vendor_selection()
+                self.parent().update_completer_old()
                 QMessageBox.information(self, "Удаление переключателя", f"Переключатель '{vendor_code}' успешно удален.")
                 self.line_edit_vendor_code.clear()
         else:

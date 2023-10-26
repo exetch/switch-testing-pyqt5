@@ -2,6 +2,7 @@ import serial
 from utils import get_contact_count, get_switch_data, read_data, send_command, check_switch, process_position, \
     read_data_return
 from time import sleep
+from utils import update_user_tests_counter
 
 RESET_SIGNAL = b'\x80'
 READY_SIGNAL = b'\x87'
@@ -14,7 +15,7 @@ NEXT_POSITION_SIGNAL = b'\x89'
 SPACE_KEY = b' '
 
 
-def data_processing(port, vendor_code, stop_event, instance):
+def data_processing(port, vendor_code, stop_event, instance, username):
     reset_signal_received = False
 
     baudrate = 256000
@@ -25,8 +26,8 @@ def data_processing(port, vendor_code, stop_event, instance):
         if stop_event.is_set():
             stop_event.clear()
             break
-        print('Сигнал сброс получен!')
-        instance.tests_counter += 1
+        instance.tests_counter[username] = instance.tests_counter.get(username, 0) + 1
+        update_user_tests_counter(username, instance.tests_counter[username])
         instance.clear_message_widget()
         instance.update_tests_counter_label()
         instance.retrieve_switch_data()
